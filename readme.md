@@ -33,12 +33,11 @@ purchase.
 -   **AWS Simple Email** Service to send a confirmation email to the
     customer
 
-[Architecture
-Diagram:](https://www.lucidchart.com/invitations/accept/b06da94c-e7dc-4b3f-b39f-50f2b1befa53)
+Architecture
+Diagram:
 
-![A screenshot of a cell phone Description automatically
-generated](media/image1.png){width="7.043579396325459in"
-height="3.1139238845144357in"}
+
+![CSCIE90_Architecture](https://files.tristanlcooper.com/hubfs/CSCIE90_Architecture.png)
 
 **Step by Step overview of Application Architecture:**
 
@@ -99,23 +98,7 @@ samples and implementation:
 > looping through the response and creating an HTML column. This is done
 > using a combination of custom CSS and Bootstrap 3.
 >
-> S3 Website:
 >
-> ![A screenshot of a social media post Description automatically
-> generated](media/image2.png){width="6.5in"
-> height="3.1791666666666667in"}
->
-> Ajax function call:
->
-> ![A screenshot of a cell phone Description automatically
-> generated](media/image3.png){width="5.75949365704287in"
-> height="4.6463604549431325in"}
-
-Lambda Function:
-
-![A screenshot of a cell phone Description automatically
-generated](media/image4.png){width="6.151898512685914in"
-height="4.949803149606299in"}
 
 2.  **A visitor clicks on "checkout" for one of the products**
 
@@ -131,9 +114,6 @@ purchase the product that they clicked "checkout" from.
 
 Stripe's "redirectToCheckout" function:
 
-![A screenshot of a cell phone Description automatically
-generated](media/image5.png){width="6.305555555555555in"
-height="2.4166666666666665in"}
 
 3.  **The visitor inputs their credit card information and purchases the
     product**
@@ -151,17 +131,12 @@ outside of AWS:
 
 -   I've created Stripe "products" to match the products of my database:
 
-![A screenshot of a cell phone Description automatically
-generated](media/image6.png){width="6.5in" height="2.70625in"}
 
 -   Following Stripe's documentation for "[After the
     Payment](https://stripe.com/docs/payments/checkout/fulfillment)",
     I've configured a Stripe webhook to send data to API Gateway every
     time someone successfully checks out.
 
-![A screenshot of a social media post Description automatically
-generated](media/image7.png){width="6.5in"
-height="1.7631944444444445in"}
 
 -   Because this is an example site and not to be used for actually
     processing payments, everything in Stripe is currently set to "test
@@ -191,118 +166,6 @@ We then build the SES request and save this in the "sesParams" variable.
 From there, we simply write this to the DynamoDB table to save the
 order, then send the email confirmation over to the customer.
 
-Below is the code for the Lambda function:
-
-+----------------------------------------------------------------------+
-| const checkoutBody = JSON.parse(event.body).data.object              |
-|                                                                      |
-| try                                                                  |
-|                                                                      |
-| {                                                                    |
-|                                                                      |
-| var customerEmail = await                                            |
-| stripe.customers.retrieve(checkoutBody.customer);                    |
-|                                                                      |
-| }                                                                    |
-|                                                                      |
-| catch (err)                                                          |
-|                                                                      |
-| {                                                                    |
-|                                                                      |
-| console.log(err)                                                     |
-|                                                                      |
-| }                                                                    |
-|                                                                      |
-| let email = customerEmail.email                                      |
-|                                                                      |
-| let orderid = checkoutBody.id                                        |
-|                                                                      |
-| let product = checkoutBody.display\_items\[0\].sku                   |
-|                                                                      |
-| let timestamp = new Date()                                           |
-|                                                                      |
-| let emailHtml = \`\<p\>Hi,\</p\> \<p\> Thank you for your purchase!  |
-| Here are the details: \</p\>\<p\>Product:                            |
-| \${product.attributes.name}\</p\>\<p\>Amount:                        |
-| \${product.price}\</p\>\<p\>We\'ll be in touch when your order is    |
-| successfully fulfilled.\</p\>\`                                      |
-|                                                                      |
-| var params = {                                                       |
-|                                                                      |
-| TableName: \'order-history\',                                        |
-|                                                                      |
-| Item: {                                                              |
-|                                                                      |
-| \'orderid\' : {S: orderid},                                          |
-|                                                                      |
-| \'email\' : {S: email},                                              |
-|                                                                      |
-| \'product\_name\' : { S: product.attributes.name},                   |
-|                                                                      |
-| \'order\_amount\' : { N: product.price.toString() },                 |
-|                                                                      |
-| \'date\' : {S: timestamp.toString() }                                |
-|                                                                      |
-| }                                                                    |
-|                                                                      |
-| };                                                                   |
-|                                                                      |
-| var sesParams = {                                                    |
-|                                                                      |
-| Destination: {                                                       |
-|                                                                      |
-| ToAddresses: \[ email \]                                             |
-|                                                                      |
-| },                                                                   |
-|                                                                      |
-| Message: {                                                           |
-|                                                                      |
-| Body: {                                                              |
-|                                                                      |
-| Html: { Data: emailHtml                                              |
-|                                                                      |
-| }                                                                    |
-|                                                                      |
-| },                                                                   |
-|                                                                      |
-| Subject: { Data: \"Thank you for your order!\"                       |
-|                                                                      |
-| }                                                                    |
-|                                                                      |
-| },                                                                   |
-|                                                                      |
-| Source: \"tricooper\@gmail.com\"                                     |
-|                                                                      |
-| };                                                                   |
-|                                                                      |
-| try                                                                  |
-|                                                                      |
-| {                                                                    |
-|                                                                      |
-| var result = await ddb.putItem(params).promise();                    |
-|                                                                      |
-| var sendEmail = await ses.sendEmail(sesParams).promise();            |
-|                                                                      |
-| }                                                                    |
-|                                                                      |
-| catch(err)                                                           |
-|                                                                      |
-| {                                                                    |
-|                                                                      |
-| console.log(err);                                                    |
-|                                                                      |
-| }                                                                    |
-|                                                                      |
-| const response = {                                                   |
-|                                                                      |
-| statusCode: 200,                                                     |
-|                                                                      |
-| };                                                                   |
-|                                                                      |
-| return response;                                                     |
-|                                                                      |
-| };                                                                   |
-+----------------------------------------------------------------------+
 
 5.  **On success, the visitor is redirected to Thank You page**
 
@@ -314,9 +177,6 @@ redirected to the Thank You page.
 -   Here's a link to the website on S3:
     <http://tristancooper-simplewebsite.s3-website.us-east-2.amazonaws.com/>
 
-```{=html}
-<!-- -->
-```
 -   From here, click "checkout" on any of the products. Stripe is
     currently configured in test mode, meaning you can use Stripes "Test
     Cards" (see [here](https://stripe.com/docs/testing)) to input and
