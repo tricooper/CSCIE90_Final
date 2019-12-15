@@ -13,7 +13,7 @@ purchase.
 
 -   Longer, in depth, overview:
 
-**Github:**
+**Github:** https://github.com/tricooper/CSCIE90_Final
 
 **Technologies used:**
 
